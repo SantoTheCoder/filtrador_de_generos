@@ -7,20 +7,17 @@ detector = gender.Detector(case_sensitive=False)
 # Lista de nomes ambíguos para tratar como "desconhecido"
 ambiguous_names = ['chris', 'ray', 'van', 'nic', 'naty', 'kellen', 'malu', 'elo', 'maya', 'cris', 'andreza']
 
-# Carregar a lista estática de nomes brasileiros
+# Carregar a lista estática de nomes brasileiros (assumindo que esse arquivo existe)
 static_names = pd.read_csv('brazilian-names-and-gender.csv', delimiter=',')
-print("Colunas na lista estática:", static_names.columns.tolist())
-
-# Converter os nomes para minúsculas
 static_names['Name'] = static_names['Name'].str.lower()
-
-# Separar os nomes masculinos e femininos
 male_names = static_names[static_names['Gender'] == 'M']['Name'].tolist()
 female_names = static_names[static_names['Gender'] == 'F']['Name'].tolist()
 
+# Solicitar ao usuário o nome do arquivo de entrada
+filename = input("Por favor, insira o nome do arquivo de entrada (com extensão, ex: lista.csv): ")
+
 # Carregar o CSV com os leads
-leads = pd.read_csv('24-05-2025_lista_play_2.csv', delimiter=';')
-print("Colunas nos leads:", leads.columns.tolist())
+leads = pd.read_csv(filename, delimiter=';')
 
 # Verificar se a coluna 'nome' existe no arquivo de leads
 if 'nome' not in leads.columns:
@@ -65,10 +62,10 @@ masculino = leads[leads['genero'] == 'masculino']
 feminino = leads[leads['genero'] == 'feminino']
 desconhecido = leads[leads['genero'] == 'desconhecido']
 
-# Salvar em arquivos Excel
-masculino.to_excel('leads_masculino.xlsx', index=False)
-feminino.to_excel('leads_feminino.xlsx', index=False)
-desconhecido.to_excel('leads_desconhecido.xlsx', index=False)
+# Salvar em arquivos Excel sem a coluna 'genero'
+masculino.drop(columns=['genero']).to_excel('leads_masculino.xlsx', index=False)
+feminino.drop(columns=['genero']).to_excel('leads_feminino.xlsx', index=False)
+desconhecido.drop(columns=['genero']).to_excel('leads_desconhecido.xlsx', index=False)
 
 # Contar os resultados
 contagem_generos = leads['genero'].value_counts()
