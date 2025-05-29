@@ -4,7 +4,10 @@ import gender_guesser.detector as gender
 # Inicializar o detector de gênero
 detector = gender.Detector(case_sensitive=False)
 
-# Carregar a lista estática de nomes brasileiros do arquivo CORRETO
+# Lista de nomes ambíguos para tratar como "desconhecido"
+ambiguous_names = ['chris', 'ray', 'van', 'nic', 'naty', 'kellen', 'malu', 'elo', 'maya', 'cris', 'andreza']
+
+# Carregar a lista estática de nomes brasileiros
 static_names = pd.read_csv('brazilian-names-and-gender.csv', delimiter=',')
 print("Colunas na lista estática:", static_names.columns.tolist())
 
@@ -15,7 +18,7 @@ static_names['Name'] = static_names['Name'].str.lower()
 male_names = static_names[static_names['Gender'] == 'M']['Name'].tolist()
 female_names = static_names[static_names['Gender'] == 'F']['Name'].tolist()
 
-# Carregar o CSV com os leads (ajuste o nome do arquivo se necessário)
+# Carregar o CSV com os leads
 leads = pd.read_csv('24-05-2025_lista_play_2.csv', delimiter=';')
 print("Colunas nos leads:", leads.columns.tolist())
 
@@ -25,21 +28,34 @@ if 'nome' not in leads.columns:
 
 # Função para determinar o gênero
 def get_gender(name):
-    if not isinstance(name, str):
+    if not isinstance(name, str) or name.strip() == '':
         return 'desconhecido'
     first_name = name.split()[0].lower()
+    
+    # Verificar se é um nome ambíguo
+    if first_name in ambiguous_names:
+        return 'desconhecido'
+    
+    # 1. Verificar na lista estática
     if first_name in male_names:
         return 'masculino'
     elif first_name in female_names:
         return 'feminino'
+    
+    # 2. Aplicar a regra de terminação
+    if first_name.endswith('a'):
+        return 'feminino'
+    elif first_name.endswith('o'):
+        return 'masculino'
+    
+    # 3. Usar gender-guesser como última opção
+    gender_guess = detector.get_gender(first_name)
+    if gender_guess in ['male', 'mostly_male']:
+        return 'masculino'
+    elif gender_guess in ['female', 'mostly_female']:
+        return 'feminino'
     else:
-        gender_guess = detector.get_gender(first_name)
-        if gender_guess in ['male', 'mostly_male']:
-            return 'masculino'
-        elif gender_guess in ['female', 'mostly_female']:
-            return 'feminino'
-        else:
-            return 'desconhecido'
+        return 'desconhecido'
 
 # Adicionar a coluna 'genero' ao DataFrame de leads
 leads['genero'] = leads['nome'].apply(get_gender)
