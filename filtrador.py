@@ -1,5 +1,6 @@
 import pandas as pd
 import gender_guesser.detector as gender
+import os
 
 # Inicializar o detector de gênero
 detector = gender.Detector(case_sensitive=False)
@@ -7,7 +8,7 @@ detector = gender.Detector(case_sensitive=False)
 # Lista de nomes ambíguos para tratar como "desconhecido"
 ambiguous_names = ['chris', 'ray', 'van', 'nic', 'naty', 'kellen', 'malu', 'elo', 'maya', 'cris', 'andreza']
 
-# Carregar a lista estática de nomes brasileiros (assumindo que esse arquivo existe)
+# Carregar a lista estática de nomes brasileiros
 static_names = pd.read_csv('brazilian-names-and-gender.csv', delimiter=',')
 static_names['Name'] = static_names['Name'].str.lower()
 male_names = static_names[static_names['Gender'] == 'M']['Name'].tolist()
@@ -15,6 +16,14 @@ female_names = static_names[static_names['Gender'] == 'F']['Name'].tolist()
 
 # Solicitar ao usuário o nome do arquivo de entrada
 filename = input("Por favor, insira o nome do arquivo de entrada (com extensão, ex: lista.csv): ")
+
+# Extrair o nome base do arquivo (sem extensão)
+base_name = os.path.splitext(filename)[0]
+
+# Criar a pasta com o nome base, se não existir
+output_dir = base_name
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 # Carregar o CSV com os leads
 leads = pd.read_csv(filename, delimiter=';')
@@ -62,10 +71,10 @@ masculino = leads[leads['genero'] == 'masculino']
 feminino = leads[leads['genero'] == 'feminino']
 desconhecido = leads[leads['genero'] == 'desconhecido']
 
-# Salvar em arquivos Excel sem a coluna 'genero'
-masculino.drop(columns=['genero']).to_excel('leads_masculino.xlsx', index=False)
-feminino.drop(columns=['genero']).to_excel('leads_feminino.xlsx', index=False)
-desconhecido.drop(columns=['genero']).to_excel('leads_desconhecido.xlsx', index=False)
+# Salvar os arquivos CSV dentro da pasta criada, sem a coluna 'genero'
+masculino.drop(columns=['genero']).to_csv(os.path.join(output_dir, f"{base_name}_masculino.csv"), sep=';', index=False)
+feminino.drop(columns=['genero']).to_csv(os.path.join(output_dir, f"{base_name}_feminino.csv"), sep=';', index=False)
+desconhecido.drop(columns=['genero']).to_csv(os.path.join(output_dir, f"{base_name}_desconhecido.csv"), sep=';', index=False)
 
 # Contar os resultados
 contagem_generos = leads['genero'].value_counts()
