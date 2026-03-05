@@ -3,10 +3,16 @@ import glob
 import pandas as pd
 from math import ceil
 import gender_guesser.detector as gender
+import re
 
-# Inicializar recursos O(1) do oráculo anti-mulher
 detector = gender.Detector(case_sensitive=False)
 ambiguous_names = set(['chris', 'ray', 'van', 'nic', 'naty', 'kellen', 'malu', 'elo', 'maya', 'cris', 'andreza'])
+# O Escudo dos Patriarcas (Evita que Y, I e E matem guerreiros acidentalmente na Guilhotina Latina Estendida)
+ambiguous_names.update([
+    'davi', 'yuri', 'ari', 'rui', 'levi', 'sidnei', 'rony', 'kauai', 'valdir', 'vanderlei',
+    'giovani', 'valdeci', 'irineu', 'odair', 'alceni', 'almiro', 'nei', 'eli', 'tony', 
+    'deri', 'joelcir', 'jair', 'auri', 'ademir', 'aldair', 'rudi', 'juri', 'kadu', 'denis'
+])
 
 print("[*] Carregando barreira ontológica (Dataset Base Unificado)...")
 female_names = set()
@@ -29,30 +35,43 @@ print(f"[+] O(1) Hash Map estabelecido: {len(female_names)} assinaturas feminina
 def is_female(name):
     if not isinstance(name, str) or name.strip() == '':
         return False
+        
     first_name = name.split()[0].lower()
     
-    # 1. Barreira de Ambiguidade (Não Obliterar)
+    # [VETOR DE OBLITERAÇÃO DE EMOJIS/LEET SPEAK]
+    # Remove qualquer coisa que não seja uma letra do alfabeto (elimina emojis, números, simbolos).
+    first_name = re.sub(r'[^a-záàãâéêíóôõúç]', '', first_name)
+    
+    # Se o nome era literalmente apenas um emoji (ex: 💖), ou número (ex: 777), ignorar.
+    if not first_name:
+        return False
+    
+    # 1. Barreira de Ambiguidade / Escudo dos Patriarcas (Não Obliterar)
     if first_name in ambiguous_names:
         return False
 
-    # 2. ORÁCULO DE ESTADO (Dataset Puro)
+    # 2. ESCUDO MORFOLÓGICO MASCULINO (Absoluto e Cirúrgico)
+    # Protege homens puramente masculinos. Letras como 'l' (Carol), 's' (Larys), 'm' (Carmem), 
+    # 'u' (Malu) foram removidas daqui para não salvar as spam-bots acidentalmente.
+    if first_name.endswith(('o', 'r', 'n', 'c', 'd', 't', 'z', 'x', 'h', 'pe', 'gue', 'que', 'te')):
+        return False
+
+    # 3. ORÁCULO DE ESTADO (Dataset Puro)
     if first_name in female_names:
         return True
         
-    # 3. A GUILHOTINA LATINA (Morfologia Feminina Padrão)
-    if first_name.endswith('a'):
+    # 4. A GUILHOTINA LATINA ESTENDIDA (A Obliteração das Malditas)
+    # Bots asiáticas e perfis fakes assumem sistematicamente pseudônimos de "putas/scams":
+    # Karoll, Stefany, Rillary, Taty, Babi, Riri, Lari. Tudo cairá aqui sem perdão.
+    if first_name.endswith(('a', 'y', 'i', 'ie', 'll', 'nn', 'lly')):
         return True
-        
-    # 4. SALVAGUARDA MASCULINA (Se terminar em 'o', é homem, ignora ML)
-    if first_name.endswith('o'):
-        return False
     
     # 5. O VETOR DE FALLBACK ESTRANGEIRO (Machine Learning Simples)
     gender_guess = detector.get_gender(first_name)
     if gender_guess in ['female', 'mostly_female']:
         return True
         
-    # Se sobreviveu a tudo, passa.
+    # Se sobreviveu a tudo (e se for homem terminando em Letra Bizarra que não tá no escudo), passa.
     return False
 
 def processar_e_dividir(encoding='utf-8'):
