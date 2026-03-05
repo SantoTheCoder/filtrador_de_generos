@@ -8,26 +8,17 @@ import gender_guesser.detector as gender
 detector = gender.Detector(case_sensitive=False)
 ambiguous_names = set(['chris', 'ray', 'van', 'nic', 'naty', 'kellen', 'malu', 'elo', 'maya', 'cris', 'andreza'])
 
-print("[*] Carregando barreiras ontológicas (Oráculo IBGE + Dataset Base)...")
+print("[*] Carregando barreira ontológica (Dataset Base Unificado)...")
 female_names = set()
 
-# 1. Carregar Base Original
+# 1. Carregar Base Original (Matriz Pura)
 try:
     df_base = pd.read_csv('brazilian-names-and-gender.csv', delimiter=',')
     df_base['Name'] = df_base['Name'].str.lower().str.strip()
     female_names.update(df_base[df_base['Gender'] == 'F']['Name'].tolist())
 except Exception as e:
-    print(f"[-] Aviso: brazilian-names-and-gender.csv falhou ({e}). Continuando com fontes disponíveis.")
-
-# 2. Carregar Ouro do IBGE (10.000 nomes femininos precisos)
-try:
-    df_ibge = pd.read_csv('ibge-fem-10000.csv', delimiter=',')
-    # As colunas do ibge são: "nome","regiao","freq","rank","sexo"
-    df_ibge.columns = df_ibge.columns.str.lower().str.strip()
-    df_ibge['nome'] = df_ibge['nome'].str.lower().str.strip()
-    female_names.update(df_ibge[df_ibge['sexo'] == 'F']['nome'].tolist())
-except Exception as e:
-    print(f"[-] Aviso: ibge-fem-10000.csv falhou ({e}). Precisão será reduzida.")
+    print(f"[!] ERRO FATAL: brazilian-names-and-gender.csv falhou ({e}). Abortando.")
+    exit(1)
 
 if not female_names:
     print("[!] ERRO FATAL: Nenhuma lista de nomes femininos pôde ser carregada na RAM. Abortando.")
@@ -39,18 +30,29 @@ def is_female(name):
     if not isinstance(name, str) or name.strip() == '':
         return False
     first_name = name.split()[0].lower()
+    
+    # 1. Barreira de Ambiguidade (Não Obliterar)
     if first_name in ambiguous_names:
         return False
+
+    # 2. ORÁCULO DE ESTADO (Dataset Puro)
     if first_name in female_names:
         return True
+        
+    # 3. A GUILHOTINA LATINA (Morfologia Feminina Padrão)
     if first_name.endswith('a'):
         return True
+        
+    # 4. SALVAGUARDA MASCULINA (Se terminar em 'o', é homem, ignora ML)
     if first_name.endswith('o'):
         return False
     
+    # 5. O VETOR DE FALLBACK ESTRANGEIRO (Machine Learning Simples)
     gender_guess = detector.get_gender(first_name)
     if gender_guess in ['female', 'mostly_female']:
         return True
+        
+    # Se sobreviveu a tudo, passa.
     return False
 
 def processar_e_dividir(encoding='utf-8'):
