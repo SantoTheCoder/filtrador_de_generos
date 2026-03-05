@@ -8,14 +8,32 @@ import gender_guesser.detector as gender
 detector = gender.Detector(case_sensitive=False)
 ambiguous_names = set(['chris', 'ray', 'van', 'nic', 'naty', 'kellen', 'malu', 'elo', 'maya', 'cris', 'andreza'])
 
-print("[*] Carregando barreira ontológica (brazilian-names-and-gender.csv)...")
+print("[*] Carregando barreiras ontológicas (Oráculo IBGE + Dataset Base)...")
+female_names = set()
+
+# 1. Carregar Base Original
 try:
-    static_names = pd.read_csv('brazilian-names-and-gender.csv', delimiter=',')
-    static_names['Name'] = static_names['Name'].str.lower()
-    female_names = set(static_names[static_names['Gender'] == 'F']['Name'].tolist())
-except FileNotFoundError:
-    print("[!] ERRO FATAL: Arquivo brazilian-names-and-gender.csv não encontrado na mesma pasta. Abortando.")
+    df_base = pd.read_csv('brazilian-names-and-gender.csv', delimiter=',')
+    df_base['Name'] = df_base['Name'].str.lower().str.strip()
+    female_names.update(df_base[df_base['Gender'] == 'F']['Name'].tolist())
+except Exception as e:
+    print(f"[-] Aviso: brazilian-names-and-gender.csv falhou ({e}). Continuando com fontes disponíveis.")
+
+# 2. Carregar Ouro do IBGE (10.000 nomes femininos precisos)
+try:
+    df_ibge = pd.read_csv('ibge-fem-10000.csv', delimiter=',')
+    # As colunas do ibge são: "nome","regiao","freq","rank","sexo"
+    df_ibge.columns = df_ibge.columns.str.lower().str.strip()
+    df_ibge['nome'] = df_ibge['nome'].str.lower().str.strip()
+    female_names.update(df_ibge[df_ibge['sexo'] == 'F']['nome'].tolist())
+except Exception as e:
+    print(f"[-] Aviso: ibge-fem-10000.csv falhou ({e}). Precisão será reduzida.")
+
+if not female_names:
+    print("[!] ERRO FATAL: Nenhuma lista de nomes femininos pôde ser carregada na RAM. Abortando.")
     exit(1)
+
+print(f"[+] O(1) Hash Map estabelecido: {len(female_names)} assinaturas femininas prontas para bloqueio.")
 
 def is_female(name):
     if not isinstance(name, str) or name.strip() == '':
