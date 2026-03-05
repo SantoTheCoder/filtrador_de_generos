@@ -58,13 +58,18 @@ def processar_e_dividir(encoding='utf-8'):
     print(f"\n[*] Carregando arquivo {filename} na memória (Aguarde)...")
     try:
         df = pd.read_csv(filename, delimiter=';', encoding=encoding)
+        # Normalização estrutural para evitar anomalias de formatação humana
+        df.columns = df.columns.str.lower().str.strip()
     except Exception as e:
         print(f"[!] Erro ao ler o CSV. Tente outro encoding ou verifique o arquivo. Detalhe: {e}")
         return
 
     if 'nome' not in df.columns:
-        print("[!] ERRO FATAL: A coluna 'nome' não foi encontrada no arquivo.")
+        print("[!] ERRO FATAL: A coluna 'nome' não foi encontrada no arquivo. Colunas atuais:", list(df.columns))
         return
+
+    # Normalizar espaços na coluna de nomes para precisão absoluta do oráculo
+    df['nome'] = df['nome'].astype(str).str.strip()
 
     total_bruto = len(df)
     print(f"[*] Aplicando barreira de obliteração feminina sobre {total_bruto} registros...")
