@@ -92,13 +92,23 @@ def processar_e_dividir(encoding='utf-8'):
     total_bruto = len(df)
     print(f"[*] Aplicando barreira de obliteração feminina sobre {total_bruto} registros...")
 
-    # 3. Aniquilar as mulheres do conjunto principal antes da divisão
-    df_filtrado = df[~df['nome'].apply(is_female)]
+    # 3. Aniquilar as mulheres do conjunto principal (Operação com Máscara Vetorial O(n))
+    mask_feminina = df['nome'].apply(is_female)
     
+    df_filtrado = df[~mask_feminina] # O que sobrevive (Homens/Desconhecidos)
+    df_mulheres = df[mask_feminina]  # O que foi obliterado
+
     total_valido = len(df_filtrado)
-    mulheres_removidas = total_bruto - total_valido
+    mulheres_removidas = len(df_mulheres)
     
-    print(f"[+] Limpeza concluída. {mulheres_removidas} mulheres purgadas.")
+    # 3.1. Gerar LOG materializado (Evidência da aniquilação)
+    if mulheres_removidas > 0:
+        log_nome = f"{base_nome}_LOG_mulheres_purgadas.csv"
+        df_mulheres.to_csv(log_nome, sep=';', index=False, encoding=encoding)
+        print(f"[+] LOG GERADO: {mulheres_removidas} perfis femininos exportados para '{log_nome}' para auditoria.")
+    else:
+        print("[+] Limpeza concluída. Nenhuma mulher encontrada.")
+
     print(f"[*] Restam {total_valido} registros masculinos/desconhecidos para divisão.")
     
     if total_valido == 0:
